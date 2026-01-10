@@ -169,7 +169,8 @@ SurgeSynthEditor::SurgeSynthEditor(SurgeSynthProcessor &p)
     keyboard = std::make_unique<juce::MidiKeyboardComponent>(
         processor.midiKeyboardState, juce::MidiKeyboardComponent::Orientation::horizontalKeyboard);
     keyboard->setVelocity(midiKeyboardVelocity, true);
-    keyboard->setOctaveForMiddleC(5 - mcValue);
+    // ! maybe not needed but changed 5 to 4
+    keyboard->setOctaveForMiddleC(4 - mcValue);
     keyboard->setKeyPressBaseOctave(midiKeyboardOctave);
     keyboard->setLowestVisibleKey(24);
     // this makes VKB always receive keyboard input (except when we focus on any typeins, of course)
@@ -287,35 +288,57 @@ void SurgeSynthEditor::setVKBLayout(const std::string layout)
     {
         keyboard->clearKeyMappings();
 
-        unsigned int n = 0;
+//         unsigned int n = 0;
 
-        for (auto i : search->second)
-        {
-            // Don't bind accessible action keys to the keyboard
-            if (Surge::GUI::allowKeyboardEdits(&processor.surge->storage))
-            {
-                // Don't know why we have high bit set on the keys? Do both to be sure
-                auto b1 = Surge::Widgets::isAccessibleKey((juce::KeyPress)i);
-                auto b2 =
-                    (i > 128) ? Surge::Widgets::isAccessibleKey((juce::KeyPress)(i - 128)) : false;
+//         for (auto i : search->second)
+//         {
+//             // Don't bind accessible action keys to the keyboard
+//             if (Surge::GUI::allowKeyboardEdits(&processor.surge->storage))
+//             {
+//                 // Don't know why we have high bit set on the keys? Do both to be sure
+//                 auto b1 = Surge::Widgets::isAccessibleKey((juce::KeyPress)i);
+//                 auto b2 =
+//                     (i > 128) ? Surge::Widgets::isAccessibleKey((juce::KeyPress)(i - 128)) : false;
 
-                if (b1 || b2)
-                {
-                    continue;
-                }
-            }
-#if JUCE_LINUX
-            // See issue #7604
-            if (i < 128)
-            {
-                keyboard->setKeyPressForNote((juce::KeyPress)i, n);
-            }
-#else
-            keyboard->setKeyPressForNote((juce::KeyPress)i, n);
-#endif
+//                 if (b1 || b2)
+//                 {
+//                     continue;
+//                 }
+//             }
+// #if JUCE_LINUX
+//             // See issue #7604
+//             if (i < 128)
+//             {
+//                 keyboard->setKeyPressForNote((juce::KeyPress)i, n);
+//             }
+// #else
+//             keyboard->setKeyPressForNote((juce::KeyPress)i, n);
+// #endif
 
-            n++;
-        }
+//             n++;
+//         }
+
+        // Row 1: Z row (Lower Octave + extra notes)
+        // Keys: Z S X D C V G B H N J M , L . ; /
+        // Map:  C C# D D# E F F# G G# A A# B C C# D D# E
+        std::vector<std::pair<int, int>> lowerKeys = {
+            {'z', 0},  {'s', 1},  {'x', 2},  {'d', 3},  {'c', 4},  {'v', 5},  {'g', 6},
+            {'b', 7},  {'h', 8},  {'n', 9},  {'j', 10}, {'m', 11}, 
+            {188, 12}, {'l', 13}, {190, 14}, {186, 15}, {191, 16}
+        };
+
+        // Row 2: Q row (Upper Octave + extra notes)
+        // Keys: Q 2 W 3 E R 5 T 6 Y 7 U I 9 O 0 P [ = ]
+        // Map:  C C# D D# E F F# G G# A A# B C C# D D# E F F# G
+        std::vector<std::pair<int, int>> upperKeys = {
+            {'q', 12}, {'2', 13}, {'w', 14}, {'3', 15}, {'e', 16}, {'r', 17}, {'5', 18},
+            {'t', 19}, {'6', 20}, {'y', 21}, {'7', 22}, {'u', 23}, {'i', 24}, {'9', 25},
+            {'o', 26}, {'0', 27}, {'p', 28}, {'[', 29}, {'=', 30}, {']', 31}
+        };
+
+        // Loop through and apply
+        for (auto& k : lowerKeys) keyboard->setKeyPressForNote(juce::KeyPress(k.first), k.second);
+        for (auto& k : upperKeys) keyboard->setKeyPressForNote(juce::KeyPress(k.first), k.second);
     }
 }
 
@@ -794,22 +817,23 @@ bool SurgeSynthEditor::keyPressed(const juce::KeyPress &key, juce::Component *or
 
                 switch (action)
                 {
-                case Surge::GUI::VKB_OCTAVE_DOWN:
-                    midiKeyboardOctave = std::clamp(midiKeyboardOctave - 1, 0, 9);
-                    keyboard->setKeyPressBaseOctave(midiKeyboardOctave);
-                    return true;
-                case Surge::GUI::VKB_OCTAVE_UP:
-                    midiKeyboardOctave = std::clamp(midiKeyboardOctave + 1, 0, 9);
-                    keyboard->setKeyPressBaseOctave(midiKeyboardOctave);
-                    return true;
-                case Surge::GUI::VKB_VELOCITY_DOWN_10PCT:
-                    midiKeyboardVelocity = std::clamp(midiKeyboardVelocity - 0.1f, 0.f, 1.f);
-                    keyboard->setVelocity(midiKeyboardVelocity, true);
-                    return true;
-                case Surge::GUI::VKB_VELOCITY_UP_10PCT:
-                    midiKeyboardVelocity = std::clamp(midiKeyboardVelocity + 0.1f, 0.f, 1.f);
-                    keyboard->setVelocity(midiKeyboardVelocity, true);
-                    return true;
+                // ! commented out keyboard shortcuts
+                  // case Surge::GUI::VKB_OCTAVE_DOWN:
+                //     midiKeyboardOctave = std::clamp(midiKeyboardOctave - 1, 0, 9);
+                //     keyboard->setKeyPressBaseOctave(midiKeyboardOctave);
+                //     return true;
+                // case Surge::GUI::VKB_OCTAVE_UP:
+                //     midiKeyboardOctave = std::clamp(midiKeyboardOctave + 1, 0, 9);
+                //     keyboard->setKeyPressBaseOctave(midiKeyboardOctave);
+                //     return true;
+                // case Surge::GUI::VKB_VELOCITY_DOWN_10PCT:
+                //     midiKeyboardVelocity = std::clamp(midiKeyboardVelocity - 0.1f, 0.f, 1.f);
+                //     keyboard->setVelocity(midiKeyboardVelocity, true);
+                //     return true;
+                // case Surge::GUI::VKB_VELOCITY_UP_10PCT:
+                //     midiKeyboardVelocity = std::clamp(midiKeyboardVelocity + 0.1f, 0.f, 1.f);
+                //     keyboard->setVelocity(midiKeyboardVelocity, true);
+                //     return true;
                 default:
                     break;
                 }
